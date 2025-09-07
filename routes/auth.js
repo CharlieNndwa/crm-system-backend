@@ -12,6 +12,9 @@ module.exports = (pool) => {
     // @desc    Register a new user
     // @access  Public
     router.post('/register', async (req, res) => {
+        console.log('Register endpoint hit'); // Log that the endpoint was reached
+        console.log('Request body:', req.body); // Log the data received from the front-end
+
         const { email, password, first_name, last_name } = req.body; // Capture first_name and last_name
 
         try {
@@ -24,6 +27,7 @@ module.exports = (pool) => {
             // Hash the password
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
+            console.log('Password hashed successfully'); // Log successful hashing
 
             // Construct the username from first_name and last_name
             const username = `${first_name} ${last_name}`;
@@ -33,12 +37,13 @@ module.exports = (pool) => {
                 'INSERT INTO Users (email, password, username) VALUES ($1, $2, $3) RETURNING user_id, email, username, created_at',
                 [email, hashedPassword, username]
             );
+            console.log('User inserted successfully:', newUser.rows[0]); // Log successful insertion
 
             res.status(201).json({ msg: 'User registered successfully', user: newUser.rows[0] });
 
         } catch (err) {
-            console.error(err.message);
-            res.status(500).send('Server Error');
+            console.error('Registration error:', err.stack); // Print a full stack trace for better debugging
+            res.status(500).send('Server Error during registration.');
         }
     });
 
