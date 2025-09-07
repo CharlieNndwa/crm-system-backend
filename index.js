@@ -1,4 +1,4 @@
-// A test comment to force a Git change
+// index.js
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
@@ -9,7 +9,9 @@ const app = express();
 // Whitelist of allowed origins for both local and Vercel deployments
 const whitelist = [
     'http://localhost:3000',
-    'https://crm-system-749bribvk-charlie-oreobugs-projects.vercel.app'
+    'https://crm-system-749bribvk-charlie-oreobugs-projects.vercel.app',
+    'https://crm-system-app.vercel.app',
+    'https://crm-system-9ic13wkc9-charlie-oreobugs-projects.vercel.app' // This is the new URL
 ];
 
 // CORS options to dynamically check the request origin
