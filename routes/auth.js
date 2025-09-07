@@ -12,7 +12,7 @@ module.exports = (pool) => {
     // @desc    Register a new user
     // @access  Public
     router.post('/register', async (req, res) => {
-        const { email, password, username } = req.body; // Added username
+        const { email, password, first_name, last_name } = req.body; // Capture first_name and last_name
 
         try {
             // Check if the user already exists
@@ -25,10 +25,13 @@ module.exports = (pool) => {
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
+            // Construct the username from first_name and last_name
+            const username = `${first_name} ${last_name}`;
+
             // Save the new user to the database with the hashed password and username
             const newUser = await pool.query(
                 'INSERT INTO Users (email, password, username) VALUES ($1, $2, $3) RETURNING user_id, email, username, created_at',
-                [email, hashedPassword, username] // Added username to the insert query
+                [email, hashedPassword, username]
             );
 
             res.status(201).json({ msg: 'User registered successfully', user: newUser.rows[0] });
@@ -133,39 +136,39 @@ module.exports = (pool) => {
     });
 
     // @route   POST /api/auth/reset-password/:token
-// @desc    Reset password using a token
-// @access  Public
-router.post('/reset-password/:token', async (req, res) => {
-    const { token } = req.params;
-    const { password } = req.body;
+    // @desc    Reset password using a token
+    // @access  Public
+    router.post('/reset-password/:token', async (req, res) => {
+        const { token } = req.params;
+        const { password } = req.body;
 
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        const user = await pool.query(
-            'SELECT * FROM Users WHERE user_id = $1 AND reset_token = $2 AND reset_token_expiry > NOW()',
-            [decoded.id, token]
-        );
+            const user = await pool.query(
+                'SELECT * FROM Users WHERE user_id = $1 AND reset_token = $2 AND reset_token_expiry > NOW()',
+                [decoded.id, token]
+            );
 
-        if (user.rows.length === 0) {
-            return res.status(400).json({ msg: 'Invalid or expired token.' });
+            if (user.rows.length === 0) {
+                return res.status(400).json({ msg: 'Invalid or expired token.' });
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+
+            await pool.query(
+                'UPDATE Users SET password = $1, reset_token = NULL, reset_token_expiry = NULL WHERE user_id = $2',
+                [hashedPassword, user.rows[0].user_id]
+            );
+
+            res.json({ msg: 'Password has been successfully reset.' });
+
+        } catch (err) {
+            console.error(err.message);
+            res.status(500).send('Server Error');
         }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        await pool.query(
-            'UPDATE Users SET password = $1, reset_token = NULL, reset_token_expiry = NULL WHERE user_id = $2',
-            [hashedPassword, user.rows[0].user_id]
-        );
-
-        res.json({ msg: 'Password has been successfully reset.' });
-
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-});
+    });
 
     return router;
 };
