@@ -6,8 +6,14 @@ require('dotenv').config();
 
 const app = express();
 
+// A more secure CORS configuration that only allows your front-end URL
+const corsOptions = {
+    origin: 'https://crm-system-8hdhj82jn-charlie-oreobugs-projects.vercel.app', 
+    optionsSuccessStatus: 200 
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // PostgreSQL connection pool
