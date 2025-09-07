@@ -9,7 +9,7 @@ const app = express();
 // Whitelist of allowed origins for both local and Vercel deployments
 const whitelist = [
     'http://localhost:3000',
-    'https://crm-system-8750v82iu-charlie-oreobugs-projects.vercel.app'
+    'https://crm-system-749bribvk-charlie-oreobugs-projects.vercel.app'
 ];
 
 // CORS options to dynamically check the request origin
