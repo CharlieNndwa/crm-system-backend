@@ -6,10 +6,22 @@ require('dotenv').config();
 
 const app = express();
 
-// A more secure CORS configuration that only allows your front-end URL
+// Whitelist of allowed origins for both local and Vercel deployments
+const whitelist = [
+    'http://localhost:3000',
+    'https://crm-system-8750v82iu-charlie-oreobugs-projects.vercel.app'
+];
+
+// CORS options to dynamically check the request origin
 const corsOptions = {
-    origin: 'https://crm-system-8750v82iu-charlie-oreobugs-projects.vercel.app', 
-    optionsSuccessStatus: 200 
+    origin: function (origin, callback) {
+        if (whitelist.indexOf(origin) !== -1 || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    optionsSuccessStatus: 200
 };
 
 // Middleware
