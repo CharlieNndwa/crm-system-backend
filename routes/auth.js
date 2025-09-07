@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken'); // Added the jsonwebtoken import
+const jwt = require('jsonwebtoken');
 const auth = require('../middleware/auth');
 require('dotenv').config();
 const { sendPasswordResetEmail } = require('../services/emailService');
@@ -12,14 +12,14 @@ module.exports = (pool) => {
     // @desc    Register a new user
     // @access  Public
     router.post('/register', async (req, res) => {
-        console.log('Register endpoint hit'); // Log that the endpoint was reached
-        console.log('Request body:', req.body); // Log the data received from the front-end
+        console.log('Register endpoint hit');
+        console.log('Request body:', req.body);
 
-        const { email, password, first_name, last_name } = req.body; // Capture first_name and last_name
+        const { email, password, first_name, last_name } = req.body;
 
         try {
             // Check if the user already exists
-            const userExists = await pool.query('SELECT * FROM Users WHERE email = $1', [email]);
+            const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
             if (userExists.rows.length > 0) {
                 return res.status(400).json({ msg: 'User already exists' });
             }
@@ -27,22 +27,22 @@ module.exports = (pool) => {
             // Hash the password
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
-            console.log('Password hashed successfully'); // Log successful hashing
+            console.log('Password hashed successfully');
 
             // Construct the username from first_name and last_name
             const username = `${first_name} ${last_name}`;
 
             // Save the new user to the database with the hashed password and username
             const newUser = await pool.query(
-                'INSERT INTO Users (email, password, username) VALUES ($1, $2, $3) RETURNING user_id, email, username, created_at',
+                'INSERT INTO users (email, password, username) VALUES ($1, $2, $3) RETURNING user_id, email, username, created_at',
                 [email, hashedPassword, username]
             );
-            console.log('User inserted successfully:', newUser.rows[0]); // Log successful insertion
+            console.log('User inserted successfully:', newUser.rows[0]);
 
             res.status(201).json({ msg: 'User registered successfully', user: newUser.rows[0] });
 
         } catch (err) {
-            console.error('Registration error:', err.stack); // Print a full stack trace for better debugging
+            console.error('Registration error:', err.stack);
             res.status(500).send('Server Error during registration.');
         }
     });
@@ -55,7 +55,7 @@ module.exports = (pool) => {
 
         try {
             // Check if user exists
-            const user = await pool.query('SELECT * FROM Users WHERE email = $1', [email]);
+            const user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
             if (user.rows.length === 0) {
                 return res.status(400).json({ msg: 'Invalid credentials' });
             }
@@ -102,7 +102,7 @@ module.exports = (pool) => {
     router.get('/user', auth, async (req, res) => {
         try {
             const user = await pool.query(
-                'SELECT user_id, username, email FROM Users WHERE user_id = $1',
+                'SELECT user_id, username, email FROM users WHERE user_id = $1',
                 [req.user.id]
             );
             res.json(user.rows[0]);
@@ -118,7 +118,7 @@ module.exports = (pool) => {
     router.post('/forgot-password', async (req, res) => {
         const { email } = req.body;
         try {
-            const user = await pool.query('SELECT * FROM Users WHERE email = $1', [email]);
+            const user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
             if (user.rows.length === 0) {
                 return res.status(400).json({ msg: 'User with that email does not exist' });
             }
@@ -127,7 +127,7 @@ module.exports = (pool) => {
             const tokenExpiry = new Date(Date.now() + 3600000); // 1 hour
 
             await pool.query(
-                'UPDATE Users SET reset_token = $1, reset_token_expiry = $2 WHERE user_id = $3',
+                'UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE user_id = $3',
                 [resetToken, tokenExpiry, user.rows[0].user_id]
             );
 
@@ -151,7 +151,7 @@ module.exports = (pool) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             const user = await pool.query(
-                'SELECT * FROM Users WHERE user_id = $1 AND reset_token = $2 AND reset_token_expiry > NOW()',
+                'SELECT * FROM users WHERE user_id = $1 AND reset_token = $2 AND reset_token_expiry > NOW()',
                 [decoded.id, token]
             );
 
@@ -163,7 +163,7 @@ module.exports = (pool) => {
             const hashedPassword = await bcrypt.hash(password, salt);
 
             await pool.query(
-                'UPDATE Users SET password = $1, reset_token = NULL, reset_token_expiry = NULL WHERE user_id = $2',
+                'UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL WHERE user_id = $2',
                 [hashedPassword, user.rows[0].user_id]
             );
 
