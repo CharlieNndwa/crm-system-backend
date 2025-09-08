@@ -33,13 +33,35 @@ module.exports = (pool) => {
     // @desc    Get all customers for the logged-in user
     // @access  Private
     router.get('/', auth, async (req, res) => {
+        const user_id = req.user.id; // Get the user ID from the request object
+
         try {
-            const user_id = req.user.id; // Get the user ID from the request object
-            const allCustomers = await pool.query(
-                'SELECT * FROM Customers WHERE user_id = $1 ORDER BY created_at DESC',
-                [user_id] // Add user_id to the WHERE clause
-            );
+            const allCustomers = await pool.query('SELECT * FROM Customers WHERE user_id = $1 ORDER BY created_at DESC', [user_id]);
             res.json(allCustomers.rows);
+        } catch (err) {
+            console.error(err.message);
+            res.status(500).send('Server Error');
+        }
+    });
+
+    // @route   GET /api/customers/:id
+    // @desc    Get a single customer by ID for the logged-in user
+    // @access  Private
+    router.get('/:id', auth, async (req, res) => {
+        const { id } = req.params;
+        const user_id = req.user.id;
+
+        try {
+            const customer = await pool.query(
+                'SELECT * FROM Customers WHERE customer_id = $1 AND user_id = $2',
+                [id, user_id]
+            );
+
+            if (customer.rows.length === 0) {
+                return res.status(404).json({ msg: 'Customer not found or not authorized' });
+            }
+
+            res.json(customer.rows[0]);
         } catch (err) {
             console.error(err.message);
             res.status(500).send('Server Error');
@@ -96,6 +118,7 @@ module.exports = (pool) => {
             }
 
             res.json({ msg: 'Customer deleted successfully' });
+
         } catch (err) {
             console.error(err.message);
             res.status(500).send('Server Error');

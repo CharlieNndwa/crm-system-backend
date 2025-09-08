@@ -40,6 +40,30 @@ module.exports = (pool) => {
         }
     });
 
+    // @route   GET /api/deals/:id
+    // @desc    Get a single deal by ID for the logged-in user
+    // @access  Private
+    router.get('/:id', auth, async (req, res) => {
+        const { id } = req.params;
+        const user_id = req.user.id;
+
+        try {
+            const deal = await pool.query(
+                'SELECT * FROM Deals WHERE deal_id = $1 AND user_id = $2',
+                [id, user_id]
+            );
+
+            if (deal.rows.length === 0) {
+                return res.status(404).json({ msg: 'Deal not found or not authorized' });
+            }
+
+            res.json(deal.rows[0]);
+        } catch (err) {
+            console.error(err.message);
+            res.status(500).send('Server Error');
+        }
+    });
+
     // @route   PUT /api/deals/:id
     // @desc    Update a deal by ID for the logged-in user
     // @access  Private
@@ -84,7 +108,7 @@ module.exports = (pool) => {
             }
 
             res.json({ msg: 'Deal deleted successfully' });
-            
+
         } catch (err) {
             console.error(err.message);
             res.status(500).send('Server Error');
