@@ -40,6 +40,30 @@ module.exports = (pool) => {
         }
     });
 
+    // @route   GET /api/inventory/:id
+    // @desc    Get a single inventory item by ID for the logged-in user
+    // @access  Private
+    router.get('/:id', auth, async (req, res) => {
+        const { id } = req.params;
+        const user_id = req.user.id;
+
+        try {
+            const item = await pool.query(
+                'SELECT * FROM Inventory WHERE item_id = $1 AND user_id = $2',
+                [id, user_id]
+            );
+
+            if (item.rows.length === 0) {
+                return res.status(404).json({ msg: 'Inventory item not found or not authorized' });
+            }
+
+            res.json(item.rows[0]);
+        } catch (err) {
+            console.error(err.message);
+            res.status(500).send('Server Error');
+        }
+    });
+
     // @route   PUT /api/inventory/:id
     // @desc    Update an inventory item by ID for the logged-in user
     // @access  Private
