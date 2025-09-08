@@ -125,5 +125,42 @@ module.exports = (pool) => {
         }
     });
 
+    // @route   DELETE /api/customers/:id
+// @desc    Delete a customer and their associated deals and invoices
+// @access  Private
+router.delete('/:id', auth, async (req, res) => {
+    const { id } = req.params;
+    const user_id = req.user.id;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        // First, delete all invoices associated with this customer
+        await client.query('DELETE FROM Invoices WHERE customer_id = $1 AND user_id = $2', [id, user_id]);
+
+        // Then, delete all deals associated with this customer
+        await client.query('DELETE FROM Deals WHERE customer_id = $1 AND user_id = $2', [id, user_id]);
+        
+        // Finally, delete the customer itself
+        const result = await client.query('DELETE FROM Customers WHERE customer_id = $1 AND user_id = $2 RETURNING *', [id, user_id]);
+
+        if (result.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ msg: 'Customer not found or not authorized' });
+        }
+
+        await client.query('COMMIT');
+        res.json({ msg: 'Customer and all associated records deleted successfully' });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    } finally {
+        client.release();
+    }
+});
+
     return router;
 };

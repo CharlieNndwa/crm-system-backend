@@ -115,5 +115,40 @@ module.exports = (pool) => {
         }
     });
 
+    // @route   DELETE /api/deals/:id
+// @desc    Delete a deal by ID for the logged-in user, and its associated tasks
+// @access  Private
+router.delete('/:id', auth, async (req, res) => {
+    const { id } = req.params;
+    const user_id = req.user.id;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        // First, delete all tasks associated with this deal
+        await client.query('DELETE FROM Tasks WHERE deal_id = $1 AND user_id = $2', [id, user_id]);
+
+        // Then, delete the deal itself
+        const result = await client.query('DELETE FROM Deals WHERE deal_id = $1 AND user_id = $2 RETURNING *', [id, user_id]);
+
+        if (result.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ msg: 'Deal not found or not authorized' });
+        }
+
+        await client.query('COMMIT');
+        res.json({ msg: 'Deal and associated tasks deleted successfully' });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    } finally {
+        client.release();
+    }
+});
+
+
     return router;
 };
